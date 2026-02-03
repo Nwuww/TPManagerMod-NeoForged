@@ -9,6 +9,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.commands.arguments.EntityArgument; // 用于解析玩家/实体
 
+import java.util.UUID;
+
 public class TPCommand
 {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher)
@@ -16,58 +18,121 @@ public class TPCommand
         // 命令处理
         dispatcher.register(
                 Commands.literal("tpa")
-                        .requires(source -> source.hasPermission(1))
-                        .then(
-                                Commands.argument("target", EntityArgument.player()) // 定义一个玩家参数，名称为target
-                                        .executes(TPCommand::executeTpa)
+                        .then(Commands.argument("target", EntityArgument.player())
+                                .executes(context -> {
+                                    ServerPlayer source = context.getSource().getPlayerOrException();
+                                    ServerPlayer target = EntityArgument.getPlayer(context, "target");
+
+                                    long remainingCooldown = TpaManager.getRemainingCooldown(source.getUUID());
+                                    if (remainingCooldown > 0)
+                                    {
+                                        source.sendSystemMessage(Component.literal("还需要等待 " + remainingCooldown + " 秒后才能发送另一个传送请求").withColor(0xFF8C00));        ;
+                                        return 0;
+                                    }
+
+                                    TpaManager.addRequest(source.getUUID(), target.getUUID(), 60);
+                                    TpaManager.cooldown(source.getUUID());
+
+                                    target.sendSystemMessage(buildRequestMessage(source.getScoreboardName()));
+                                    source.sendSystemMessage(Component.literal("传送请求已发送到" + target.getScoreboardName() + "."));
+
+                                    return Command.SINGLE_SUCCESS;
+                                })
                         )
         );
-    }
 
-    private static int executeTpa(CommandContext<CommandSourceStack> context) throws CommandSyntaxException
-    {
-        // 获取命令发送者
-        ServerPlayer sourcePlayer = context.getSource().getPlayerOrException();
+        dispatcher.register(
+                Commands.literal("tpdeny")
+                        .executes(context -> {
 
-        // 获取目标玩家参数
-        ServerPlayer targetPlayer = EntityArgument.getPlayer(context, "target");
+                            ServerPlayer target = context.getSource().getPlayerOrException();
+                            UUID requesterUUID = TpaManager.getRequestTarget(target.getUUID());
 
-        // 传送源玩家到目标玩家位置
-        sourcePlayer.teleportTo(
-                targetPlayer.serverLevel(),
-                targetPlayer.getX(),
-                targetPlayer.getY(),
-                targetPlayer.getZ(),
-                targetPlayer.getYRot(),
-                targetPlayer.getXRot()
+                            if (requesterUUID != null)
+                            {
+                                ServerPlayer requester = context.getSource().getServer().getPlayerList().getPlayer(requesterUUID);
+                                if (requester != null)
+                                {
+                                    requester.sendSystemMessage(Component.literal("传送请求被拒绝！").withColor(0xCD5C5C));
+                                    target.sendSystemMessage(Component.literal("你已拒绝传送请求"));
+                                }
+                                else
+                                {
+                                    target.sendSystemMessage(Component.literal("请求者已下线").withColor(0xFF8C00));
+                                }
+                                TpaManager.removeRequest(target.getUUID());
+                            }
+                            else
+                            {
+                                target.sendSystemMessage(Component.literal("你没有待处理的传送请求"));
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        })
         );
 
-        // 发送反馈消息
-        sourcePlayer.sendSystemMessage(Component.literal("You've been teleported to " + targetPlayer.getName().getString() + " successfully!"));
-        targetPlayer.sendSystemMessage(Component.literal(sourcePlayer.getName().getString() + " has been teleported to you!"));
+        dispatcher.register(
+                Commands.literal("tpaccept")
+                        .executes(context -> {
 
-        return Command.SINGLE_SUCCESS;
+                            ServerPlayer target = context.getSource().getPlayerOrException();
+                            UUID requesterUUID = TpaManager.getRequestTarget(target.getUUID());
+
+                            if (requesterUUID != null)
+                            {
+                                ServerPlayer requester = context.getSource().getServer().getPlayerList().getPlayer(requesterUUID);
+                                if (requester != null)
+                                {
+                                    requester.teleportTo(
+                                            target.serverLevel(),
+                                            target.getX(),
+                                            target.getY(),
+                                            target.getZ(),
+                                            target.getYRot(),
+                                            target.getXRot()
+                                    );
+
+                                    requester.sendSystemMessage(Component.literal("传送请求已被接受！"));
+                                    target.sendSystemMessage(Component.literal("你已接受传送请求"));
+                                }
+                                else
+                                {
+                                    target.sendSystemMessage(Component.literal("请求者不在线"));
+                                }
+                                TpaManager.removeRequest(target.getUUID());
+                            }
+                            else
+                            {
+                                target.sendSystemMessage(Component.literal("你没有待处理的传送请求"));
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        })
+        );
     }
-    private static int executeTeleport(CommandContext<CommandSourceStack> context)
+
+    private static Component buildRequestMessage(String requesterName)
     {
-        // CommandSourceStack 命令发送源
-        try
-        {
-            // 获取发送命令的实体（可能报错）
-            // 尝试将发送源转为玩家对象
-            ServerPlayer player = context.getSource().getPlayerOrException();
 
-            // 传送玩家
-            player.teleportTo(0.0, 100.0, 0.0);
-
-            player.sendSystemMessage(Component.literal("You're now at (0, 0)!"));
-
-            return Command.SINGLE_SUCCESS;
-        }
-        catch(CommandSyntaxException ex)
-        {
-            context.getSource().sendFailure(Component.literal("Only player could be tp."));
-            return 0;
-        }
+        return Component.literal(requesterName + " 请求传送到你的位置，请输入 ")
+                .append(Component.literal(("/tpaccept")))
+                .append(Component.literal(" [接受]")
+                        .withStyle(style -> style
+                                .withColor(0x3CB371)
+                                .withBold(true)
+                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("点击以接受传送请求").withColor(0x3CB371)))
+                                .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                        net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/tpaccept"))))
+                .append(Component.literal(" 或 "))
+                .append(Component.literal(("/tpdeny")))
+                .append(Component.literal(" [拒绝]")
+                        .withStyle(style -> style
+                                .withColor(0xCD5C5C)
+                                .withBold(true)
+                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                        Component.literal("点击以拒绝传送请求").withColor(0xCD5C5C)))
+                                .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                        net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, "/tpdeny"))));
     }
 }
