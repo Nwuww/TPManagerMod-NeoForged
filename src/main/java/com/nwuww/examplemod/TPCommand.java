@@ -11,6 +11,7 @@ import net.minecraft.commands.arguments.EntityArgument; // 用于解析玩家/�
 
 import java.util.UUID;
 
+
 public class TPCommand
 {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher)
@@ -46,7 +47,7 @@ public class TPCommand
                                         return 0;
                                     }
 
-                                    TpaManager.addRequest(source.getUUID(), target.getUUID(), 60);
+                                    TpaManager.addRequest(source.getUUID(), target.getUUID(), ConfigManager.getPlayerSettings(target.getUUID()).getTimeCancel());
                                     TpaManager.cooldown(source.getUUID());
 
                                     target.sendSystemMessage(buildRequestMessage(source.getScoreboardName()));
@@ -70,13 +71,26 @@ public class TPCommand
                                                 })
                                         )
                                 )
+                                .then(Commands.literal("timeCancel")
+                                        .then(Commands.argument("value", com.mojang.brigadier.arguments.IntegerArgumentType.integer())
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    int value = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(context, "value");
+
+                                                    ConfigManager.getPlayerSettings(player.getUUID()).setTimeCancel(value);
+                                                    ConfigManager.save();
+
+                                                    player.sendSystemMessage(Component.literal("请求超时时间已设置为: " + value));
+                                                    return Command.SINGLE_SUCCESS;
+                                                })
+                                        )
+                                )
                         )
         );
 
         dispatcher.register(
                 Commands.literal("tpdeny")
                         .executes(context -> {
-
                             ServerPlayer target = context.getSource().getPlayerOrException();
                             UUID requesterUUID = TpaManager.getRequestTarget(target.getUUID());
 
