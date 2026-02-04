@@ -23,6 +23,22 @@ public class TPCommand
                                     ServerPlayer source = context.getSource().getPlayerOrException();
                                     ServerPlayer target = EntityArgument.getPlayer(context, "target");
 
+                                    if(ConfigManager.getPlayerSettings(target.getUUID()).isAutoAccept())
+                                    {
+                                        source.teleportTo(
+                                                target.serverLevel(),
+                                                target.getX(),
+                                                target.getY(),
+                                                target.getZ(),
+                                                target.getYRot(),
+                                                target.getXRot()
+                                        );
+
+                                        source.sendSystemMessage(Component.literal("传送请求已被自动接受！"));
+                                        target.sendSystemMessage(Component.literal(source.getScoreboardName() + " 已传送到你的位置！"));
+                                        return Command.SINGLE_SUCCESS;
+                                    }
+
                                     long remainingCooldown = TpaManager.getRemainingCooldown(source.getUUID());
                                     if (remainingCooldown > 0)
                                     {
@@ -38,6 +54,22 @@ public class TPCommand
 
                                     return Command.SINGLE_SUCCESS;
                                 })
+                        )
+                        .then(Commands.literal("config")
+                                .then(Commands.literal("autoAccept")
+                                        .then(Commands.argument("value", com.mojang.brigadier.arguments.BoolArgumentType.bool())
+                                                .executes(context -> {
+                                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                                    boolean value = com.mojang.brigadier.arguments.BoolArgumentType.getBool(context, "value");
+
+                                                    ConfigManager.getPlayerSettings(player.getUUID()).setAutoAccept(value);
+                                                    ConfigManager.save();
+
+                                                    player.sendSystemMessage(Component.literal("自动接受传送请求已设置为: " + value));
+                                                    return Command.SINGLE_SUCCESS;
+                                                })
+                                        )
+                                )
                         )
         );
 
