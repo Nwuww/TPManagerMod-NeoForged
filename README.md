@@ -7,9 +7,9 @@
   - [x] 过期
   - [x] 发送冷却
 - [ ] `tphome`
-  - [ ] 设置家 `/sethome`
+  - [x] 设置家 `/sethome`
   - [ ] 请求拜访别人家`/visit make <target> [message]`
     - [ ] 家拜访请求管理
-- [ ] `tpaconfig`
+- [x] `tpaconfig`
   - [x] 自动接受请求
-  - [ ] 过期时间配置
+  - [x] 过期时间配置
