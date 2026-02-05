@@ -10,6 +10,7 @@
   - [x] 设置家 `/sethome`
   - [ ] 请求拜访别人家`/visit make <target> [message]`
     - [ ] 家拜访请求管理
+    - [ ] 家访问权限管理
 - [x] `tpaconfig`
   - [x] 自动接受请求
   - [x] 过期时间配置
