@@ -1,6 +1,4 @@
-package com.nwuww.examplemod;
-
-import net.minecraft.network.chat.Component;
+package com.nwuww.TPManager;
 
 import java.util.*;
 

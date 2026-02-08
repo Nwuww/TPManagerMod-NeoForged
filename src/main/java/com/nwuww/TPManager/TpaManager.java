@@ -1,4 +1,4 @@
-package com.nwuww.examplemod;
+package com.nwuww.TPManager;
 
 import net.minecraft.network.chat.Component;
 

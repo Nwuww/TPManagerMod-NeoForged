@@ -1,6 +1,4 @@
-package com.nwuww.examplemod;
-
-import java.util.*;
+package com.nwuww.TPManager;
 
 public class PlayerSettings
 {

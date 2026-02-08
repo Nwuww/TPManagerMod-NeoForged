@@ -1,4 +1,4 @@
-package com.nwuww.examplemod;
+package com.nwuww.TPManager;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
