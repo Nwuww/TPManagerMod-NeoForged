@@ -1,7 +1,7 @@
 # 进行一个NeoForge开发的学🤤
 > 一个适用于**Minecraft1.21+**的**NeoForge**服务器传送mod
 >  ~~***终于写完辣哈哈哈***~~
-# 状态：Modrinth审核中..
+# [下载链接(Modrinth)](https://modrinth.com/mod/tp-manager)
 ---
 ## 功能列表
 - tpa
