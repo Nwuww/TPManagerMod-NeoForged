@@ -1,7 +1,7 @@
 # TPManager
 
 <!-- README-I18N:START -->
-**English** | [汉语](./README/README.zh.md)
+**English** | [汉语](./README.zh.md)
 <!-- README-I18N:END -->
 
 # [Downlolad Here (Modrinth)](https://modrinth.com/mod/tp-manager)
